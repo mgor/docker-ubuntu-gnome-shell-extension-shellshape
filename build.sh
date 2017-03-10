@@ -53,20 +53,23 @@ rsync -aL \
     --exclude "*gup" \
     --exclude "*.po*" \
     --exclude "Makefile" \
-    --exclude "gschemas.compiled" \
     ../shellshape/shellshape/ usr/share/gnome-shell/extensions/shellshape@gfxmonk.net
 
 # include documentation
 cp ../shellshape/LICENCE usr/share/doc/gnome-shell-extension-shellshape/copyright
 cp ../shellshape/README.md usr/share/doc/gnome-shell-extension-shellshape/
 
-# move locales to debian style path and patch code
-mv usr/share/gnome-shell/extensions/shellshape@gfxmonk.net/locale usr/share
-find . -name "*.js" -exec sed -ri "s|^([ ]+var localeDir) = .*|\1 = '/usr/share/locale';|" {} \; >/dev/null
-
-# move schemas to debian style path and patch code
-mv usr/share/gnome-shell/extensions/shellshape@gfxmonk.net/data/glib-2.0 usr/share
-find . -name "*.js" -exec sed -ri "s|^([ ]+var schemaDir) = .*|\1 = '/usr/share/glib-2.0/schemas';|" {} \; >/dev/null
+# patch supported versions
+python3 <<EOP
+import sys
+import json
+with open('usr/share/gnome-shell/extensions/shellshape@gfxmonk.net/metadata.json', 'r+') as fd:
+    metadata = json.load(fd)
+    metadata['shell-version'].extend(['3.23', '3.24'])
+    fd.seek(0)
+    fd.write(json.dumps(metadata, indent=2))
+    fd.truncate()
+EOP
 
 chown -R root:root .
 
@@ -75,7 +78,7 @@ cat > DEBIAN/control <<EOF
 Package: ${PACKAGE}
 Architecture: all
 Maintainer: ${DEBFULLNAME}
-Depends: gnome-shell (>= 3.18), gnome-tweak-tool
+Depends: gnome-shell (>= 3.18), gnome-tweak-tool, dconf-editor
 Version: ${VERSION}
 Description: A tiling window manager extension for gnome-shell
  Many tiling window managers are an all-or-nothing affair, shellshape
